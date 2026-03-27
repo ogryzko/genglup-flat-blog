@@ -18,7 +18,7 @@ interface Post {
 // --- Dynamic Data Loading ---
 
 // Эта магия Vite находит все md файлы в папке /content
-const modules = import.meta.glob('/content/*.md', { as: 'raw', eager: true });
+const modules = import.meta.glob('../content/*.md', { as: 'raw', eager: true });
 
 const POSTS: Post[] = Object.keys(modules).map((filePath) => {
   const fileName = filePath.split('/').pop() || '';
