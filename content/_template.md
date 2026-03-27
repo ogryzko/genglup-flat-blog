@@ -1,6 +1,5 @@
 ---
 title: ""
 date: ""
-description: ""
-tags: []
+excerpt: ""
 ---
