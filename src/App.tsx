@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, Calendar, ChevronRight, Menu } from 'lucide-react';
 import { cn } from './lib/utils';
+import matter from 'gray-matter'; // Добавили для парсинга Markdown
 
 // --- Types ---
 
@@ -14,51 +15,27 @@ interface Post {
   content: string;
 }
 
-// --- Local Data (No API required) ---
+// --- Dynamic Data Loading ---
 
-const POSTS: Post[] = [
-  {
-    slug: "welcome",
-    title: "Добро пожаловать в мой новый блог",
-    date: "2026-03-27",
-    excerpt: "Первая запись в моем минималистичном блоге, созданном с любовью к плоскому дизайну.",
-    content: `
-# Привет, мир!
+// Эта магия Vite находит все md файлы в папке /content
+const modules = import.meta.glob('/content/*.md', { as: 'raw', eager: true });
 
-Это мой новый блог. Я решил сделать его максимально простым и понятным. Здесь я буду делиться своими мыслями о дизайне, технологиях и жизни.
+const POSTS: Post[] = Object.keys(modules).map((filePath) => {
+  const fileName = filePath.split('/').pop() || '';
+  const slug = fileName.replace('.md', '');
+  const rawContent = modules[filePath] as string;
+  
+  // Извлекаем метаданные (title, date, description) и сам текст
+  const { data, content } = matter(rawContent);
 
-## Почему минимализм?
-
-Минимализм позволяет сосредоточиться на главном — на контенте. В мире, переполненном информацией, простота становится настоящей роскошью.
-
-*   **Чистота**: Никаких лишних элементов.
-*   **Скорость**: Быстрая загрузка.
-*   **Фокус**: Только текст и идеи.
-
-Надеюсь, вам здесь понравится!
-    `
-  },
-  {
-    slug: "flat-design-power",
-    title: "Сила плоского дизайна",
-    date: "2026-03-26",
-    excerpt: "Размышления о том, почему плоские цвета и жирные контуры снова в моде.",
-    content: `
-# Плоский дизайн: Возвращение к истокам
-
-Плоский дизайн (Flat Design) — это не просто отсутствие градиентов. Это философия, которая ставит функциональность выше декоративности.
-
-## Основные принципы
-
-1.  **Отсутствие глубины**: Никаких теней (кроме жестких), скосов или текстур.
-2.  **Простые элементы**: Использование базовых геометрических форм.
-3.  **Типографика**: Шрифты играют ключевую роль в навигации и иерархии.
-4.  **Цвет**: Яркие, насыщенные или, наоборот, нежные пастельные тона.
-
-Жирные черные контуры добавляют уверенности и делают интерфейс более "графичным", почти как в комиксах. Это создает уникальный характер, который выделяется на фоне "зализанных" современных интерфейсов.
-    `
-  }
-];
+  return {
+    slug,
+    title: data.title || "Без названия",
+    date: data.date || "2026-01-01",
+    excerpt: data.description || data.excerpt || "Читать далее...",
+    content: content
+  };
+}).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
 // --- Components ---
 
