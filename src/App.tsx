@@ -150,7 +150,7 @@ export default function App() {
             className="text-3xl font-black tracking-tighter cursor-pointer"
             onClick={() => setSelectedSlug(null)}
           >
-            FLAT<span className="text-[#AF8F6F]">BLOG</span>
+            GENGLUP<span className="text-[#AF8F6F]">BLOG</span>
           </h1>
           <nav className="hidden md:flex gap-8 font-bold">
             <a href="#" className="hover:underline underline-offset-4">Статьи</a>
