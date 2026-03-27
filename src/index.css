@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply antialiased;
+  }
+}
+
+/* Custom Prose-like styles since we don't have @tailwindcss/typography installed */
+.prose h1 {
+  @apply text-4xl font-black mb-6 mt-12 tracking-tighter;
+}
+.prose h2 {
+  @apply text-3xl font-black mb-4 mt-10 tracking-tighter;
+}
+.prose h3 {
+  @apply text-2xl font-black mb-3 mt-8 tracking-tighter;
+}
+.prose p {
+  @apply mb-6 leading-relaxed text-xl;
+}
+.prose ul, .prose ol {
+  @apply mb-6 ml-6 list-disc;
+}
+.prose li {
+  @apply mb-2 text-xl;
+}
+.prose blockquote {
+  @apply border-l-8 border-black bg-white p-6 italic mb-6 text-xl;
+}
+.prose strong {
+  @apply font-black;
+}
+.prose a {
+  @apply underline decoration-4 decoration-[#FFDDC1] hover:bg-[#FFDDC1] transition-colors;
+}
