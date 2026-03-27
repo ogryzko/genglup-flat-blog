@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, Calendar, ChevronRight, Menu } from 'lucide-react';
 import { cn } from './lib/utils';
-import matter from 'gray-matter'; // Добавили для парсинга Markdown
+import matter from 'gray-matter';
 
 // --- Types ---
 
@@ -17,25 +17,42 @@ interface Post {
 
 // --- Dynamic Data Loading ---
 
-// Эта магия Vite находит все md файлы в папке /content
-const modules = import.meta.glob('/content/*.md', { as: 'raw', eager: true });
+const getPosts = (): Post[] => {
+  try {
+    const rawPosts = import.meta.glob('/content/*.md', { query: '?raw', eager: true });
+    
+    return Object.entries(rawPosts).map(([filepath, content]) => {
+      try {
+        const slug = filepath.split('/').pop()?.replace('.md', '') || '';
+        // Vite raw import might be the string itself or { default: string }
+        const rawContent = typeof content === 'string' ? content : (content as any).default;
+        
+        if (!rawContent) {
+          console.warn(`No content found for ${filepath}`);
+          return null;
+        }
 
-const POSTS: Post[] = Object.keys(modules).map((filePath) => {
-  const fileName = filePath.split('/').pop() || '';
-  const slug = fileName.replace('.md', '');
-  const rawContent = modules[filePath] as string;
-  
-  // Извлекаем метаданные (title, date, description) и сам текст
-  const { data, content } = matter(rawContent);
-
-  return {
-    slug,
-    title: data.title || "Без названия",
-    date: data.date || "2026-01-01",
-    excerpt: data.description || data.excerpt || "Читать далее...",
-    content: content
-  };
-}).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const { data, content: body } = matter(rawContent);
+        
+        return {
+          slug,
+          title: data.title || 'Untitled',
+          date: data.date || new Date().toISOString(),
+          excerpt: data.excerpt || '',
+          content: body,
+        };
+      } catch (err) {
+        console.error(`Error parsing markdown file ${filepath}:`, err);
+        return null;
+      }
+    })
+    .filter((post): post is Post => post !== null)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  } catch (err) {
+    console.error("Error loading posts:", err);
+    return [];
+  }
+};
 
 // --- Components ---
 
@@ -111,16 +128,18 @@ const Button = ({ children, onClick, className }: { children: React.ReactNode; o
 export default function App() {
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
   const [currentPost, setCurrentPost] = useState<Post | null>(null);
+  
+  const posts = useMemo(() => getPosts(), []);
 
   useEffect(() => {
     if (selectedSlug) {
-      const post = POSTS.find(p => p.slug === selectedSlug);
+      const post = posts.find(p => p.slug === selectedSlug);
       setCurrentPost(post || null);
       window.scrollTo(0, 0);
     } else {
       setCurrentPost(null);
     }
-  }, [selectedSlug]);
+  }, [selectedSlug, posts]);
 
   return (
     <div className="min-h-screen bg-[#FDFCF0] text-black font-sans selection:bg-[#FFDDC1]">
@@ -165,7 +184,7 @@ export default function App() {
                   <p className="text-xl text-gray-700 max-w-md">
                     Минималистичный блог о дизайне, коде и простоте. Читайте, вдохновляйтесь, создавайте.
                   </p>
-                  <Button onClick={() => POSTS.length > 0 && setSelectedSlug(POSTS[0].slug)}>
+                  <Button onClick={() => posts.length > 0 && setSelectedSlug(posts[0].slug)}>
                     Читать последний пост
                   </Button>
                 </div>
@@ -178,31 +197,37 @@ export default function App() {
               <section className="space-y-8">
                 <h3 className="text-3xl font-black border-b-4 border-black inline-block mb-4">НЕДАВНИЕ ЗАПИСИ</h3>
                 <div className="grid gap-6">
-                  {POSTS.map((post) => (
-                    <Card 
-                      key={post.slug} 
-                      onClick={() => setSelectedSlug(post.slug)}
-                      className="group"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
-                            <Calendar size={16} />
-                            {new Date(post.date).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  {posts.length === 0 ? (
+                    <div className="py-20 text-center text-xl font-bold border-4 border-black border-dashed">
+                      Статей пока нет. Добавьте .md файлы в папку /content!
+                    </div>
+                  ) : (
+                    posts.map((post) => (
+                      <Card 
+                        key={post.slug} 
+                        onClick={() => setSelectedSlug(post.slug)}
+                        className="group"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
+                              <Calendar size={16} />
+                              {new Date(post.date).toLocaleDateString('ru-RU', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </div>
+                            <h4 className="text-2xl font-black group-hover:text-[#AF8F6F] transition-colors">
+                              {post.title}
+                            </h4>
+                            <p className="text-gray-600 line-clamp-2">
+                              {post.excerpt}
+                            </p>
                           </div>
-                          <h4 className="text-2xl font-black group-hover:text-[#AF8F6F] transition-colors">
-                            {post.title}
-                          </h4>
-                          <p className="text-gray-600 line-clamp-2">
-                            {post.excerpt}
-                          </p>
+                          <div className="bg-black text-white p-2 border-2 border-black group-hover:bg-[#FFDDC1] group-hover:text-black transition-all">
+                            <ChevronRight size={24} />
+                          </div>
                         </div>
-                        <div className="bg-black text-white p-2 border-2 border-black group-hover:bg-[#FFDDC1] group-hover:text-black transition-all">
-                          <ChevronRight size={24} />
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    ))
+                  )}
                 </div>
               </section>
             </motion.div>
